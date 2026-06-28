@@ -1,0 +1,29 @@
+[project]
+name = "rtrl-snap-reproduction"
+version = "0.1.0"
+description = "A lightweight reproduction of Practical Real Time Recurrent Learning with a Sparse Approximation to the Jacobian."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Yangjunjie Lin" }
+]
+dependencies = [
+    "numpy",
+    "jax",
+    "jaxlib",
+    "optax",
+    "pyyaml",
+    "matplotlib",
+    "pytest",
+    "tqdm"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
