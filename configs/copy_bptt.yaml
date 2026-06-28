@@ -1,0 +1,14 @@
+seed: 0
+algorithm: bptt
+
+task:
+  batch_size: 16
+  copy_length: 5
+
+model:
+  hidden_size: 64
+
+training:
+  num_steps: 500
+  learning_rate: 0.001
+  log_every: 50
