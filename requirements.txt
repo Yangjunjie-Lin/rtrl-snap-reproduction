@@ -1,0 +1,21 @@
+# Core numerical computing
+numpy
+
+# JAX backend
+jax
+jaxlib
+
+# Optimizers for JAX
+optax
+
+# Config files
+pyyaml
+
+# Plotting
+matplotlib
+
+# Testing
+pytest
+
+# Progress bars
+tqdm
