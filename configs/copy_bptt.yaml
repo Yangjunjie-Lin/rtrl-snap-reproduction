@@ -12,3 +12,7 @@ training:
   num_steps: 500
   learning_rate: 0.001
   log_every: 50
+
+logging:
+  save_csv: true
+  output_path: results/logs/copy_bptt.csv
