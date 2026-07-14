@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 from pathlib import Path
 
 import jax
@@ -13,6 +14,18 @@ from rtrl_snap.algorithms.snap import create_snap1_train_step
 from rtrl_snap.models.vanilla_rnn import initialize_vanilla_rnn_params
 from rtrl_snap.tasks.copy_task import COPY_VOCAB_SIZE, generate_copy_batch
 from rtrl_snap.utils.config import load_yaml_config
+
+
+CSV_FIELDS = [
+    "step",
+    "loss",
+    "accuracy",
+    "algorithm",
+    "copy_length",
+    "hidden_size",
+    "learning_rate",
+    "seed",
+]
 
 
 def parse_args() -> argparse.Namespace:
@@ -41,6 +54,34 @@ def _create_train_step(algorithm: str, optimizer):
         f"Unsupported algorithm '{algorithm}'. "
         "Supported algorithms: bptt, rtrl, snap1."
     )
+
+
+def _maybe_open_csv(config: dict, algorithm: str):
+    """
+    Optionally open a CSV log file based on config['logging'].
+
+    Returns:
+        (csv_writer, file_handle) or (None, None) if logging is disabled.
+    """
+
+    logging_config = config.get("logging") or {}
+    save_csv = bool(logging_config.get("save_csv", False))
+    if not save_csv:
+        return None, None
+
+    output_path = Path(
+        logging_config.get(
+            "output_path",
+            f"results/logs/copy_{algorithm}.csv",
+        )
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    file_handle = output_path.open("w", newline="", encoding="utf-8")
+    writer = csv.DictWriter(file_handle, fieldnames=CSV_FIELDS)
+    writer.writeheader()
+    print(f"Writing CSV logs to {output_path}")
+    return writer, file_handle
 
 
 def train_copy(config: dict) -> None:
@@ -78,6 +119,7 @@ def train_copy(config: dict) -> None:
     opt_state = optimizer.init(params)
 
     train_step = _create_train_step(algorithm, optimizer)
+    csv_writer, csv_file = _maybe_open_csv(config, algorithm)
 
     progress_bar = trange(
         1,
@@ -85,37 +127,56 @@ def train_copy(config: dict) -> None:
         desc=f"Training {algorithm.upper()}",
     )
 
-    for step in progress_bar:
-        key, batch_key = jax.random.split(key)
+    try:
+        for step in progress_bar:
+            key, batch_key = jax.random.split(key)
 
-        batch = generate_copy_batch(
-            key=batch_key,
-            batch_size=batch_size,
-            copy_length=copy_length,
-        )
-
-        params, opt_state, metrics = train_step(
-            params,
-            opt_state,
-            batch.inputs,
-            batch.targets,
-            batch.target_mask,
-        )
-
-        if step == 1 or step % log_every == 0:
-            loss = float(metrics["loss"])
-            accuracy = float(metrics["accuracy"])
-
-            progress_bar.set_postfix(
-                loss=f"{loss:.4f}",
-                accuracy=f"{accuracy:.4f}",
+            batch = generate_copy_batch(
+                key=batch_key,
+                batch_size=batch_size,
+                copy_length=copy_length,
             )
 
-            print(
-                f"step={step:05d} "
-                f"loss={loss:.6f} "
-                f"accuracy={accuracy:.6f}"
+            params, opt_state, metrics = train_step(
+                params,
+                opt_state,
+                batch.inputs,
+                batch.targets,
+                batch.target_mask,
             )
+
+            if step == 1 or step % log_every == 0:
+                loss = float(metrics["loss"])
+                accuracy = float(metrics["accuracy"])
+
+                progress_bar.set_postfix(
+                    loss=f"{loss:.4f}",
+                    accuracy=f"{accuracy:.4f}",
+                )
+
+                print(
+                    f"step={step:05d} "
+                    f"loss={loss:.6f} "
+                    f"accuracy={accuracy:.6f}"
+                )
+
+                if csv_writer is not None:
+                    csv_writer.writerow(
+                        {
+                            "step": step,
+                            "loss": loss,
+                            "accuracy": accuracy,
+                            "algorithm": algorithm,
+                            "copy_length": copy_length,
+                            "hidden_size": hidden_size,
+                            "learning_rate": learning_rate,
+                            "seed": seed,
+                        }
+                    )
+                    csv_file.flush()
+    finally:
+        if csv_file is not None:
+            csv_file.close()
 
 
 def main() -> None:
