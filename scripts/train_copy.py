@@ -9,6 +9,7 @@ from tqdm import trange
 
 from rtrl_snap.algorithms.bptt import create_bptt_train_step
 from rtrl_snap.algorithms.rtrl import create_rtrl_train_step
+from rtrl_snap.algorithms.snap import create_snap1_train_step
 from rtrl_snap.models.vanilla_rnn import initialize_vanilla_rnn_params
 from rtrl_snap.tasks.copy_task import COPY_VOCAB_SIZE, generate_copy_batch
 from rtrl_snap.utils.config import load_yaml_config
@@ -34,9 +35,11 @@ def _create_train_step(algorithm: str, optimizer):
         return create_bptt_train_step(optimizer)
     if algorithm == "rtrl":
         return create_rtrl_train_step(optimizer)
+    if algorithm == "snap1":
+        return create_snap1_train_step(optimizer)
     raise NotImplementedError(
         f"Unsupported algorithm '{algorithm}'. "
-        "Supported algorithms: bptt, rtrl."
+        "Supported algorithms: bptt, rtrl, snap1."
     )
 
 
